@@ -87,7 +87,45 @@ def depthFirstSearch(problem):
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+
+    visited = set()
+    s = util.Stack()
+    direction_map = {}
+
+    start, target = problem.getStartState(), None
+
+    # If already at the target, no need to do anything
+    if problem.isGoalState(start):
+        return []
+
+    # Populate stack with the initial coordinates
+    s.push((start, None, 0))
+
+    while not s.isEmpty():
+        coord, direction, step = s.pop()
+
+        # Have we found the food ?
+        if problem.isGoalState(coord):
+            target = (coord, direction)
+            break
+
+        if coord not in visited:
+            visited.add(coord)
+        
+        for successor in problem.getSuccessors(coord):
+            new_coord = successor[0]
+            if new_coord not in visited:
+                s.push(successor)
+                direction_map[new_coord] = (coord, direction)
+
+    path = []
+    curr, direction = target[0], target[1]
+    while curr and direction:
+        path.append(direction)
+        curr, direction = direction_map.get(curr, (None, None))
+    
+    path = list(reversed(path))
+    return path
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
