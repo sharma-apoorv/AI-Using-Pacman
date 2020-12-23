@@ -153,7 +153,7 @@ def breadthFirstSearch(problem):
         for successor in problem.getSuccessors(coord):
             adj = successor[0]
             adj_dir = successor[1]
-            
+
             if adj not in visited:
                 q.push((adj, path + [adj_dir]))
 
@@ -164,8 +164,43 @@ def breadthFirstSearch(problem):
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    
+    visited = set()
+    pq = util.PriorityQueue()
+
+    start, target = problem.getStartState(), None
+
+    # If already at the target, no need to do anything
+    if problem.isGoalState(start):
+        return []
+
+    # Populate stack with the initial coordinates
+    pq.push((start, []), 0)
+    
+    while not pq.isEmpty():
+        coord, path = pq.pop()
+        visited.add(coord)
+
+        # Have we found the food ?
+        if problem.isGoalState(coord):
+            return path
+
+        for successor in problem.getSuccessors(coord):
+            adj = successor[0]
+            adj_dir = successor[1]
+
+            if adj not in visited:
+                # Get next path and cost of actions
+                adj_path = path + [adj_dir]
+                cost = problem.getCostOfActions(adj_path)
+
+                pq.push((adj, adj_path), cost)
+
+                # Don't want to add the goal state to visited
+                if not problem.isGoalState(adj):
+                    visited.add(adj)
+
+    return []
 
 def nullHeuristic(state, problem=None):
     """
