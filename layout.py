@@ -16,6 +16,7 @@ from util import manhattanDistance
 from game import Grid
 import os
 import random
+from functools import reduce
 
 VISIBILITY_MATRIX_CACHE = {}
 
@@ -129,7 +130,6 @@ class Layout:
             self.agentPositions.append( (int(layoutChar), (x,y)))
             self.numGhosts += 1
 def getLayout(name, back = 2):
-    print(name)
     if name.endswith('.lay'):
         layout = tryToLoad('layouts/' + name)
         if layout == None: layout = tryToLoad(name)
@@ -144,7 +144,6 @@ def getLayout(name, back = 2):
     return layout
 
 def tryToLoad(fullname):
-    print(fullname)
     if(not os.path.exists(fullname)): return None
     f = open(fullname)
     try: return Layout([line.strip() for line in f])
