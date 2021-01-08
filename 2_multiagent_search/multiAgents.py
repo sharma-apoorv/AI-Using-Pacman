@@ -73,8 +73,56 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        if currentGameState.isWin():
+            return float('inf')
+        elif currentGameState.isLose():
+            return float('-inf')
+
+        curr_position = currentGameState.getPacmanPosition()
+
+        # Compute distance to closest uneaten food (NOT power pellet)
+        curr_food_list = currentGameState.getFood().asList()
+        min_food_distance = min([util.manhattanDistance(curr_position, food) for food in curr_food_list])
+
+        # calculate number of power pellets
+        power_pellets_list = currentGameState.getCapsules()
+
+        # Compute distance for active and scared ghosts
+        active_ghost_list, scared_ghost_list = [], []
+        for ghost in newGhostStates:
+            if ghost.scaredTimer == 0: # This ghost is active (hunting pacman)
+                active_ghost_list.append(ghost)
+            else: # This ghost is scared ;)
+                scared_ghost_list.append(ghost)
+        
+        def get_min_ghost_distance(ghost_list):
+            return min([util.manhattanDistance(curr_position, ghost.getPosition()) for ghost in ghost_list])
+
+        min_active_ghost_distance = float('inf') # reward if, there are no active ghosts!
+        if active_ghost_list: # If there are active ghosts ... 
+            min_active_ghost_distance = get_min_ghost_distance(active_ghost_list)
+
+        min_scared_ghost_distance = 0 # if all ghosts are active, don't do anything
+        if scared_ghost_list:
+            min_scared_ghost_distance = get_min_ghost_distance(scared_ghost_list)
+        
+        DISTANCE_TO_FOOD_MULTIPLIER = -2 #the farther the food, the worse the score
+        DISTANCE_TO_ACTIVE_GHOST_MULTIPLIER = 4 #the farther the active ghost, the better the score
+        DISTANCE_TO_SCARED_GHOST_MULTIPLIER = -3 #the farther the scared ghost, the worse the score
+
+        TOTAL_FOOD_LEFT_MULTIPLIER = -10 #the more food is left, the worse the score
+        TOTAL_POWER_PELLETS_LEFT = -5 #the more the pellets left, the lower the score
+        SUCCESSOR_SCORE_MULTIPLIER = 1 #no reason to change this ... 
+
+        evaluation_score =  (successorGameState.getScore() * SUCCESSOR_SCORE_MULTIPLIER) +\
+                            (min_food_distance * DISTANCE_TO_FOOD_MULTIPLIER) +\
+                            (min_active_ghost_distance * DISTANCE_TO_ACTIVE_GHOST_MULTIPLIER) +\
+                            (min_scared_ghost_distance * DISTANCE_TO_SCARED_GHOST_MULTIPLIER) +\
+                            (len(power_pellets_list) * TOTAL_POWER_PELLETS_LEFT) +\
+                            (len(curr_food_list) * TOTAL_FOOD_LEFT_MULTIPLIER)
+
+
+        return evaluation_score
 
 def scoreEvaluationFunction(currentGameState):
     """
