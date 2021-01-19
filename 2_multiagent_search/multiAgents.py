@@ -216,7 +216,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
 
     def max_value(self, game_state, agent_idx, curr_depth):
         actions = game_state.getLegalActions(agent_idx)
-        max_v, min_action = float('-inf'), Directions.STOP
+        max_v, max_action = float('-inf'), Directions.STOP
  
         next_agent_idx, next_depth = agent_idx + 1, curr_depth
         if self.is_last_agent(game_state, agent_idx):
@@ -226,9 +226,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
             successor = game_state.generateSuccessor(agent_idx, action)
             v, _ = self.value(successor, next_agent_idx, next_depth)
             if v > max_v:
-                max_v, min_action = v, action
+                max_v, max_action = v, action
 
-        return max_v, min_action
+        return max_v, max_action
     
     def is_last_agent(self, game_state, agent_idx):
         return agent_idx == game_state.getNumAgents() - 1
