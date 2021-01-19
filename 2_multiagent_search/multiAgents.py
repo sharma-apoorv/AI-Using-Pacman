@@ -180,8 +180,61 @@ class MinimaxAgent(MultiAgentSearchAgent):
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        return self.value(game_state=gameState, agent_idx=0, curr_depth=self.depth)[1]
+
+
+    def value(self, game_state, agent_idx, curr_depth):
+
+        # base case -- tree should stop here and return score
+        if not curr_depth or game_state.isWin() or game_state.isLose():
+            return self.evaluationFunction(game_state), None
+        
+        # maximize function call for pacman 
+        if self.is_pacman(game_state, agent_idx):
+            return self.max_value(game_state, agent_idx, curr_depth)
+        
+        # minimize function call for ghosts 
+        return self.min_value(game_state, agent_idx, curr_depth)
+
+    def min_value(self, game_state, agent_idx, curr_depth):
+        actions = game_state.getLegalActions(agent_idx)
+        min_v, min_action = float('inf'), Directions.STOP
+
+        next_agent_idx, next_depth = agent_idx + 1, curr_depth
+        if self.is_last_agent(game_state, agent_idx):
+            next_agent_idx, next_depth = 0, curr_depth - 1
+            
+        for action in actions:
+            successor = game_state.generateSuccessor(agent_idx, action)
+            v, _ = self.value(successor, next_agent_idx, next_depth)
+            
+            if v < min_v:
+                min_v, min_action = v, action
+        
+        return min_v, min_action
+
+    def max_value(self, game_state, agent_idx, curr_depth):
+        actions = game_state.getLegalActions(agent_idx)
+        max_v, min_action = float('-inf'), Directions.STOP
+ 
+        next_agent_idx, next_depth = agent_idx + 1, curr_depth
+        if self.is_last_agent(game_state, agent_idx):
+            next_agent_idx, next_depth = 0, curr_depth - 1
+            
+        for action in actions:
+            successor = game_state.generateSuccessor(agent_idx, action)
+            v, _ = self.value(successor, next_agent_idx, next_depth)
+            if v > max_v:
+                max_v, min_action = v, action
+
+        return max_v, min_action
+    
+    def is_last_agent(self, game_state, agent_idx):
+        return agent_idx == game_state.getNumAgents() - 1
+    
+    def is_pacman(self, game_state, agent_idx):
+        return agent_idx == 0
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
