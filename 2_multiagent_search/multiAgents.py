@@ -383,8 +383,62 @@ def betterEvaluationFunction(currentGameState):
 
     DESCRIPTION: <write something here so we know what you did>
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+
+    # Useful information you can extract from a GameState (pacman.py)
+    successorGameState = currentGameState
+    newPos = successorGameState.getPacmanPosition()
+    newFood = successorGameState.getFood()
+    newGhostStates = successorGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+    ghostScaredTime = [scared_time for scared_time in newScaredTimes if scared_time != 0]
+
+    if currentGameState.isWin():
+        return float('inf')
+    elif currentGameState.isLose():
+        return float('-inf')
+
+    # Compute distance for active and scared ghosts
+    active_ghost_list, scared_ghost_list = [], []
+    for ghost in newGhostStates:
+        if ghost.scaredTimer == 0: # This ghost is active (hunting pacman)
+            active_ghost_list.append(ghost)
+        else: # This ghost is scared ;)
+            scared_ghost_list.append(ghost)
+    
+    num_scared_ghosts, num_active_ghosts = len(scared_ghost_list), len(active_ghost_list)
+    if num_active_ghosts == 0:
+        return float('inf') # We want to positively reward eating a power pellet!
+    
+    def get_min_ghost_distance(ghost_list):
+        return min([util.manhattanDistance(newPos, ghost.getPosition()) for ghost in ghost_list])
+
+    # Find the min distances for active and scared ghosts
+    min_active_ghost_distance = get_min_ghost_distance(active_ghost_list)
+    min_scared_ghost_distance = float('inf') # if all ghosts are active, don't do anything
+    if num_scared_ghosts:
+        min_scared_ghost_distance = get_min_ghost_distance(scared_ghost_list)
+    
+    min_scared_time_remaining = 0
+    if num_scared_ghosts: min_scared_time_remaining = min(ghostScaredTime)
+    if min_active_ghost_distance <= 1 or (num_scared_ghosts and min_scared_ghost_distance <= 1 and ghostScaredTime <= 2):
+        return float('-inf') #the ghosts are too close ... and are likely to eat Pacman
+
+    # Compute distance to closest uneaten food (NOT power pellet)
+    curr_food_list = currentGameState.getFood().asList()
+    min_food_distance = min([util.manhattanDistance(newPos, food) for food in curr_food_list])
+
+    SUCCESSOR_SCORE_MULTIPLIER = 1 #no reason to change this ... 
+    DISTANCE_TO_FOOD_MULTIPLIER = -5 #the farther the food, the worse the score
+    TOTAL_FOOD_LEFT_MULTIPLIER = -50 #the more food is left, the worse the score
+
+    evaluation_score =  (successorGameState.getScore() * SUCCESSOR_SCORE_MULTIPLIER) +\
+                        (min_food_distance * DISTANCE_TO_FOOD_MULTIPLIER) +\
+                        (len(curr_food_list) * TOTAL_FOOD_LEFT_MULTIPLIER)
+
+    if min_scared_time_remaining >= 2:
+        evaluation_score -= min_scared_ghost_distance # we want to get closer to scared ghosts
+
+    return evaluation_score
 
 # Abbreviation
 better = betterEvaluationFunction
