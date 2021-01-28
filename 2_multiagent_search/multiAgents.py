@@ -321,7 +321,60 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.value(game_state=gameState, agent_idx=0, curr_depth=self.depth)[1]
+    
+    def value(self, game_state, agent_idx, curr_depth):
+
+        # base case -- tree should stop here and return score
+        if not curr_depth or game_state.isWin() or game_state.isLose():
+            return self.evaluationFunction(game_state), None
+        
+        # maximize function call for pacman 
+        if self.is_pacman(game_state, agent_idx):
+            return self.max_value(game_state, agent_idx, curr_depth)
+        
+        # expectimax function call for ghosts 
+        return self.exp_value(game_state, agent_idx, curr_depth)
+
+    def exp_value(self, game_state, agent_idx, curr_depth):
+        actions = game_state.getLegalActions(agent_idx)
+        exp_v, exp_action = float('inf'), Directions.STOP
+
+        next_agent_idx, next_depth = agent_idx + 1, curr_depth
+        if self.is_last_agent(game_state, agent_idx):
+            next_agent_idx, next_depth = 0, curr_depth - 1
+        
+        exp_value_sum = 0
+        for action in actions:
+            successor = game_state.generateSuccessor(agent_idx, action)
+            v, _ = self.value(successor, next_agent_idx, next_depth)
+            exp_value_sum += v
+        
+        exp_v = exp_value_sum / len(actions)
+        
+        return exp_v, exp_action
+
+    def max_value(self, game_state, agent_idx, curr_depth):
+        actions = game_state.getLegalActions(agent_idx)
+        max_v, max_action = float('-inf'), Directions.STOP
+ 
+        next_agent_idx, next_depth = agent_idx + 1, curr_depth
+        if self.is_last_agent(game_state, agent_idx):
+            next_agent_idx, next_depth = 0, curr_depth - 1
+            
+        for action in actions:
+            successor = game_state.generateSuccessor(agent_idx, action)
+            v, _ = self.value(successor, next_agent_idx, next_depth)
+            if v > max_v:
+                max_v, max_action = v, action
+
+        return max_v, max_action
+    
+    def is_last_agent(self, game_state, agent_idx):
+        return agent_idx == game_state.getNumAgents() - 1
+    
+    def is_pacman(self, game_state, agent_idx):
+        return agent_idx == 0
 
 def betterEvaluationFunction(currentGameState):
     """
