@@ -338,7 +338,8 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
     def exp_value(self, game_state, agent_idx, curr_depth):
         actions = game_state.getLegalActions(agent_idx)
-        exp_v, exp_action = float('inf'), Directions.STOP
+        random_action_index = random.randrange(0, len(actions))
+        exp_v, exp_action = float('inf'), actions[random_action_index]
 
         next_agent_idx, next_depth = agent_idx + 1, curr_depth
         if self.is_last_agent(game_state, agent_idx):
@@ -388,6 +389,7 @@ def betterEvaluationFunction(currentGameState):
     successorGameState = currentGameState
     newPos = successorGameState.getPacmanPosition()
     newFood = successorGameState.getFood()
+    power_pellet_list = currentGameState.getCapsules()
     newGhostStates = successorGameState.getGhostStates()
     newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
     ghostScaredTime = [scared_time for scared_time in newScaredTimes if scared_time != 0]
@@ -406,10 +408,9 @@ def betterEvaluationFunction(currentGameState):
             scared_ghost_list.append(ghost)
     
     num_scared_ghosts, num_active_ghosts = len(scared_ghost_list), len(active_ghost_list)
-    if num_active_ghosts == 0:
-        return float('inf') # We want to positively reward eating a power pellet!
     
     def get_min_ghost_distance(ghost_list):
+        if not ghost_list: return 0
         return min([util.manhattanDistance(newPos, ghost.getPosition()) for ghost in ghost_list])
 
     # Find the min distances for active and scared ghosts
@@ -420,23 +421,50 @@ def betterEvaluationFunction(currentGameState):
     
     min_scared_time_remaining = 0
     if num_scared_ghosts: min_scared_time_remaining = min(ghostScaredTime)
-    if min_active_ghost_distance <= 1 or (num_scared_ghosts and min_scared_ghost_distance <= 1 and ghostScaredTime <= 2):
-        return float('-inf') #the ghosts are too close ... and are likely to eat Pacman
 
     # Compute distance to closest uneaten food (NOT power pellet)
     curr_food_list = currentGameState.getFood().asList()
     min_food_distance = min([util.manhattanDistance(newPos, food) for food in curr_food_list])
 
-    SUCCESSOR_SCORE_MULTIPLIER = 1 #no reason to change this ... 
-    DISTANCE_TO_FOOD_MULTIPLIER = -5 #the farther the food, the worse the score
-    TOTAL_FOOD_LEFT_MULTIPLIER = -50 #the more food is left, the worse the score
+    pellet_distance_list = [util.manhattanDistance(newPos, pellet) for pellet in power_pellet_list]
 
-    evaluation_score =  (successorGameState.getScore() * SUCCESSOR_SCORE_MULTIPLIER) +\
-                        (min_food_distance * DISTANCE_TO_FOOD_MULTIPLIER) +\
-                        (len(curr_food_list) * TOTAL_FOOD_LEFT_MULTIPLIER)
+    # Get the current score
+    curr_score = currentGameState.getScore()
 
-    if min_scared_time_remaining >= 2:
-        evaluation_score -= min_scared_ghost_distance # we want to get closer to scared ghosts
+    SUCCESSOR_SCORE_MULTIPLIER      = 1     #no reason to change this ... 
+    DISTANCE_TO_FOOD_MULTIPLIER     = 8   #the farther the food, the worse the score
+    DISTANCE_TO_PELLET_MULTIPLIER   = 200   #the farther the food, the worse the score
+    TOTAL_FOOD_LEFT_MULTIPLIER      = 8   #the more food is left, the worse the score
+    CURR_SCORE_MULTIPLIER           = 1     #the higher the points, the better the score
+    ACTIVE_GHOST_MULTIPLIER         = 8    #the larger the distance to active ghost the better the score
+    SCARED_GHOST_MULTIPLIER         = 3    #the larger the distance to active ghost the better the score
+
+    evaluation_score = (curr_score * CURR_SCORE_MULTIPLIER)
+    if min_food_distance:
+        evaluation_score += (DISTANCE_TO_FOOD_MULTIPLIER / min_food_distance)
+        evaluation_score += (TOTAL_FOOD_LEFT_MULTIPLIER / len(curr_food_list))
+    
+    if power_pellet_list:
+        evaluation_score += (DISTANCE_TO_PELLET_MULTIPLIER / len(power_pellet_list))
+
+    if min_scared_time_remaining > 0:
+        return evaluation_score - (min_scared_ghost_distance * SCARED_GHOST_MULTIPLIER)
+
+    if min_active_ghost_distance <= 2: # Ghost is about to catch up!
+        return evaluation_score - min_active_ghost_distance * 4
+    elif min_active_ghost_distance <= 5: # Ghost is getting closer
+        return evaluation_score - min_active_ghost_distance * 2
+
+    return evaluation_score + min_active_ghost_distance
+
+    # evaluation_score =  (successorGameState.getScore() * SUCCESSOR_SCORE_MULTIPLIER) +\
+    #                     (DISTANCE_TO_FOOD_MULTIPLIER * 1/min_food_distance) +\
+    #                     (TOTAL_FOOD_LEFT_MULTIPLIER * 1/len(curr_food_list)) +\
+    #                     (curr_score * CURR_SCORE_MULTIPLIER) +\
+    #                     (min_active_ghost_distance * ACTIVE_GHOST_MULTIPLIER)
+
+    # if min_scared_time_remaining >= 2:
+    #     evaluation_score -= min_scared_ghost_distance # we want to get closer to scared ghosts
 
     return evaluation_score
 
