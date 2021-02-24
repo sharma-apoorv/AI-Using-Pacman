@@ -60,7 +60,6 @@ class ValueIterationAgent(ValueEstimationAgent):
         self.discount = discount
         self.iterations = iterations
         self.values = util.Counter() # A Counter is a dict with default 0
-        self.qValues = util.Counter()
         self.runValueIteration()
 
         return
@@ -202,5 +201,91 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
+
+        self.pq = util.PriorityQueue()
+        self.predecessors = {}
+        
+        states_list = self.mdp.getStates()
+
+        self.compute_predecessors(states_list)
+        self.populate_priority_queue(states_list)
+        self.compute_iterations(states_list)
+    
+    def compute_predecessors(self, states_list):
+
+        for curr_state in states_list:
+            prev_states = set()
+
+            for prev_state in states_list:
+                
+                actions_list = self.mdp.getPossibleActions(prev_state)
+                for action in actions_list:
+
+                    transition_tuples = self.mdp.getTransitionStatesAndProbs(prev_state, action)
+                    for next_state, p in transition_tuples:
+
+                        # if there is a probability and we can get from the predecessor
+                        # to the current state we are on ... 
+                        if (p > 0) and (next_state == curr_state):
+                            prev_states.add(prev_state)
+            
+            self.predecessors[curr_state] = prev_states
+
+    def populate_priority_queue(self, states_list):
+
+        for state in states_list:
+            if self.mdp.isTerminal(state): 
+                continue
+                
+            curr_state_value = self.getValue(state)
+            actions_list = self.mdp.getPossibleActions(state)
+            values = util.Counter()
+            for action in actions_list:
+                values[(state, action)] = self.computeQValueFromValues(state, action)
+            
+            max_value = max([values[(state, action)] for action in actions_list])
+            diff = abs(max_value - curr_state_value)
+
+            # -We use a negative because the priority queue is a min heap, 
+            # but we want to prioritize updating states that have a higher error
+            self.pq.push(state, -diff)
+    
+    def compute_iterations(self, states_list):
+
+        for i in range(self.iterations):
+
+            if self.pq.isEmpty(): #priority queue is empty, then terminate
+                break
+                
+            state = self.pq.pop()
+            if not self.mdp.isTerminal(state):
+            
+                q_values = []
+                actions_list = self.mdp.getPossibleActions(state)
+                for action in actions_list:
+                    
+                    q_value = 0
+                    transition_tuples = self.mdp.getTransitionStatesAndProbs(state, action)
+                    for next_state, p in transition_tuples:
+                        transition_reward = self.mdp.getReward(state, action, next_state)
+                        q_value += p * (transition_reward + self.discount * self.values[next_state])
+
+                    q_values.append(q_value)
+                
+                self.values[state] = max(q_values)
+            
+            for prev_state in self.predecessors[state]:
+                
+                current = self.values[prev_state]
+                
+                q_values = []
+                actions_list = self.mdp.getPossibleActions(prev_state)
+                for action in self.mdp.getPossibleActions(prev_state):
+                    q_values.append(self.computeQValueFromValues(prev_state, action))
+                
+                max_value = max(q_values)
+                diff = abs((current - max_value))
+                
+                if diff > self.theta:
+                    self.pq.update(prev_state, -diff)
 
