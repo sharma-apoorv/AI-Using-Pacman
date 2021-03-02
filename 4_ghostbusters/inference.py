@@ -178,7 +178,7 @@ class InferenceModule:
         """
         
         if ghostPosition == jailPosition:
-            if not noisyDistance: return float(1)
+            if noisyDistance == None: return float(1)
             else: return float(0)
         elif noisyDistance == None: return float(0)
 
