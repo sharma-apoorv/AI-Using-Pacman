@@ -180,7 +180,7 @@ class InferenceModule:
         if ghostPosition == jailPosition:
             if not noisyDistance: return float(1)
             else: return float(0)
-        elif not noisyDistance: return float(0)
+        elif noisyDistance == None: return float(0)
 
         true_distance = manhattanDistance(pacmanPosition, ghostPosition)
         return busters.getObservationProbability(noisyDistance, true_distance)
@@ -290,8 +290,11 @@ class ExactInference(InferenceModule):
         current position. However, this is not a problem, as Pacman's current
         position is known.
         """
-        "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+
+        jailPos = self.getJailPosition()
+        pacPos = gameState.getPacmanPosition()
+        for ghostPos in self.allPositions:
+            self.beliefs[ghostPos] *= self.getObservationProb(observation, pacPos, ghostPos, jailPos)
 
         self.beliefs.normalize()
 
