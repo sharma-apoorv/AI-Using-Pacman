@@ -433,13 +433,9 @@ class JointParticleFilter(ParticleFilter):
         uniform prior.
         """
         
-        for _ in range(self.numGhosts - 1):
-            self.legalPositions = itertools.product(self.legalPositions, self.legalPositions)
-        
-        self.legalPositions = list(self.legalPositions)
-        locations = int(self.numParticles / len(self.legalPositions))
-        
-        self.particles = [permute for permute in self.legalPositions for _ in range(locations)]
+        self.particles = []
+        samples = list(itertools.product(self.legalPositions, repeat = self.numGhosts))
+        for _ in range(int(self.numParticles / len(samples))): self.particles.extend(samples)
 
     def addGhostAgent(self, agent):
         """
@@ -459,6 +455,20 @@ class JointParticleFilter(ParticleFilter):
         observation = gameState.getNoisyGhostDistances()
         self.observeUpdate(observation, gameState)
 
+    def get_normalized_distribution(self, observation, gameState):
+        dist = DiscreteDistribution()
+        for particle in self.particles:
+            
+            p = 1
+            for ghost_num in range(self.numGhosts):
+                p *= self.getObservationProb(observation[ghost_num], gameState.getPacmanPosition(), particle[ghost_num], self.getJailPosition(ghost_num))
+            
+            dist[particle] += p
+        
+        dist.normalize()
+
+        return dist
+
     def observeUpdate(self, observation, gameState):
         """
         Update beliefs based on the distance observation and Pacman's position.
@@ -471,8 +481,11 @@ class JointParticleFilter(ParticleFilter):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        "*** YOUR CODE HERE ***"
-        raiseNotDefined()
+        dist = self.get_normalized_distribution(observation, gameState)        
+        self.particles = [dist.sample() for _ in range(self.numParticles)]
+
+        if dist.total() == 0:
+            self.initializeUniformly(gameState)
 
     def elapseTime(self, gameState):
         """
